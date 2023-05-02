@@ -6,12 +6,15 @@ from django.db.models import Q
 # import folium
 
 # Create your views here.
-def index(request : HttpRequest):
-    query_params = request.GET
+def index(request, search_query=None):
+    if not search_query:
+        query_params = request.GET
+        search_query = query_params.get('search', None)
+
     ghars = Ghar.objects.all()
-    if('search' in  query_params):
-        ghars = ghars.filter( Q(name__icontains=query_params.get('search','')) |
-                     Q(price__icontains=query_params.get('search','')) )
+    if search_query:
+          
+        ghars = ghars.filter(Q(name__icontains=search_query) | Q(price__icontains=search_query) | Q(id__icontains=search_query))
 
     return JsonResponse({"data":[x for x in ghars.values()]})
     # locations = []
