@@ -1,47 +1,56 @@
+
 from django.shortcuts import render,HttpResponse
 from matrimonial_data import mongodb
 from django.http import HttpRequest, JsonResponse
 from . models import Ghar
 from django.db.models import Q
-# import folium
+
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics
+from matrimonial_data.serializers import GharSerializer
+from .filters import GharFilter
+from rest_framework.decorators import api_view
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status, generics,viewsets,filters
+from .mongodb import getData
+
 
 # Create your views here.
-def index(request, search_query=None):
-    if not search_query:
-        query_params = request.GET
-        search_query = query_params.get('search', None)
+def index(request):
+   getData()
+   return JsonResponse({'heloo':'hey'})
+  
+class GharViewSet(viewsets.ModelViewSet):
+    queryset = Ghar.objects.all()
+    serializer_class = GharSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = {
+        'bhk': ['contains'],
+        'price_amount': ['gte', 'lte']
+    }
+    search_fields = ['price_amount', 'place']
 
-    ghars = Ghar.objects.all()
-    if search_query:
-          
-        ghars = ghars.filter(Q(name__icontains=search_query) | Q(price__icontains=search_query) | Q(id__icontains=search_query))
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Get the search_query from the request query parameters
+        search_query = self.request.query_params.get('search', None)
+        
+        # If the search_query is not None, store it in the user's session
+        if search_query is not None:
+            request.session['search_query'] = search_query
+        
+        # Try to get the search_query from the user's session
+        search_query = request.session.get('search_query', None)
+        print(search_query)
+        
+        # If the search_query is not None, filter the queryset using it
+        if search_query is not None:
+            queryset = queryset.filter(Q(place__icontains=search_query) | Q(price_amount__icontains=search_query))
+       
+        filtered_queryset = self.filter_queryset(queryset)
 
-    return JsonResponse({"data":[x for x in ghars.values()]})
-    # locations = []
-    # for ghar in ghars:
-    #     locations.append({
-    #         'lat': ghar.latitude,
-    #         'lng': ghar.longitude,
-            
-    #     })
-
-    # # create a map object and add a tile layer
-    # map = folium.Map(location=[27.7172, 85.3240], zoom_start=12)
-    # folium.TileLayer('cartodbpositron').add_to(map)
-
-    # # add markers for each location
-    # for loc in locations:
-    #     folium.Marker(location=[loc['lat'], loc['lng']],
-    #                   popup=f"<strong>{loc['name']}</strong><br>Price: {loc['price']}"
-    #                  ).add_to(map)
-
-    # # get the map as HTML and return it as a response
-    # map_html = map.get_root().render()
-    # return render(request, 'index.html', {'map_html': map_html})
-    # # return JsonResponse({"data":[x for x in ghars.values()]})
-    
-
-
-
-
-    
+        serializer = self.get_serializer(filtered_queryset, many=True)
+        return Response(serializer.data)

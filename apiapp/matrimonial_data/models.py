@@ -4,7 +4,9 @@ from django.db import models
 class Ghar(models.Model):
     id = models.CharField(max_length=20,primary_key=True,blank=False,null=False)
     image = models.URLField(null=True)
-    price = models.CharField(max_length=20,null=True)
+    price_amount = models.IntegerField(default=0,null=True)
+    bhk = models.IntegerField(null=True)
+    place = models.TextField(default="",null=True )
     name = models.TextField(default="")
     # latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True)
     # longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True)
